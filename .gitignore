@@ -1,0 +1,5 @@
+*.pth/
+json_data/
+saved_model/
+
+*.csv
