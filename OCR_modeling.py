@@ -27,7 +27,7 @@ def modeling(csv_path):
     df, df_test = train_test_split(df, test_size=0.2, random_state=42)
     # df_test=pd.concat([df_not, df_test], axis=0)
     # df_not.to_csv("not_tagged_test.csv", encoding='utf-8-sig', index=False)
-    df_test.to_csv("test_df_score_drop.csv", encoding='utf-8-sig', index=False)
+    df_test.to_csv("OCR_test_df.csv", encoding='utf-8-sig', index=False)
     model_name="paust/pko-t5-base"
     # 모델 로드
     tokenizer = T5TokenizerFast.from_pretrained(model_name)
@@ -120,5 +120,5 @@ def modeling(csv_path):
 if __name__ == "__main__":
     # without_score_model=modeling(r'C:\Users\KHU\Desktop\tagging_seq2seq\sentenced_df_without_score.csv')
     # without_score_model.save_model("without_score_model.pth")
-    with_score_model=modeling(r'C:\Users\KHU\Desktop\tagging_seq2seq\sentenced_df_with_score_not_split.csv')
-    with_score_model.save_model("with_score_model_drop.pth")
+    with_score_model=modeling(r'C:\Users\KHU\Desktop\tagging_seq2seq\sentenced_df_OCR.csv')
+    with_score_model.save_model("OCR_model.pth")

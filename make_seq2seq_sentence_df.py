@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from functions import *
 import multiprocessing as mp
+import time 
 
 def make_df(folder_path, score_flag=True):
     '''score 없는 버전'''
@@ -10,7 +11,7 @@ def make_df(folder_path, score_flag=True):
     df = load_json_files(folder_path)
     df = pd.json_normalize(df)
     # 줄바꿈 문자 제거
-    df['content'] = df['content'].apply(lambda row: row.replace("\n", ""))
+    df['content'] = df['content'].apply(lambda row: row.replace("\n", "")).apply(lambda row: regexp(row))
     
     # 태깅정보가 없는 애들은 테스트용으로 따로 저장
     not_tagged = df[df['our_topics'].isnull()].index
@@ -38,21 +39,52 @@ def make_df(folder_path, score_flag=True):
             tagged_topic_score_list = []
             tagged_sentiment_score_list = []
 
-
         for tag in row['our_topics']:
             try:
-                if tag['text'] == "":
-                    continue
+                if score_flag:
+                    # 키 존재 여부만 확인
+                    if ("topic" not in tag
+                        or "positive_yn" not in tag
+                        or "sentiment_scale" not in tag
+                        or "topic_score" not in tag
+                        or tag['text']==""):
+
+                        continue
+                    else:
+                        # print(tag['text'])
+                        tagged_text_list.append(regexp(tag['text'].replace("\n", ' ')))
+                        # print(regexp(tag['text'].replace("\n", ' ')))
+                        tagged_topic_list.append(tag['topic'])
+                        tagged_sentiment_list.append(tag['positive_yn'].replace('Y', '긍정').replace('N', '부정'))
+                        if tag['topic_score']==0:
+                                # print(tag['text'])
+                                # print(tag['topic_score'])
+                                # print("토픽 스코어 == 0")
+                            tagged_topic_score_list.append(1)
+                        else:
+                            tagged_topic_score_list.append(tag['topic_score'])
+
+                        if tag['sentiment_scale']==0:
+                                print("감정 스코어 == 0")
+                                # print(tag['text'])
+                                tagged_sentiment_score_list.append(1)
+                        else:
+                                # print(tag['sentiment_scale'])
+                            tagged_sentiment_score_list.append(tag['sentiment_scale'])
+
                 else:
-                    tagged_text_list.append(tag['text'])
-                    tagged_topic_list.append(tag['topic'])
-                    tagged_sentiment_list.append(tag['positive_yn'].replace('Y', '긍정').replace('N', '부정'))
-                    if score_flag:
-                        tagged_topic_score_list.append(tag['topic_score'])
-                        tagged_sentiment_score_list.append(tag['sentiment_scale'])
+                    if ("topic" not in tag
+                        or "positive_yn" not in tag):
+                        continue
+                    else:
+                        # print(regexp(tag['text'].replace("\n", ' ')))
+                        tagged_text_list.append(regexp(tag['text'].replace("\n", ' ')))
+                        tagged_topic_list.append(tag['topic'])
+                        tagged_sentiment_list.append(tag['positive_yn'].replace('Y', '긍정').replace('N', '부정'))
 
             except:
-                continue
+                continue  # 오류 발생 시 다음 태그로 넘어감
+        
 
         if tagged_text_list != [] and tagged_topic_list != [] and tagged_sentiment_list != []:
             tag_exist = True
@@ -62,7 +94,7 @@ def make_df(folder_path, score_flag=True):
             if score_flag:
                 df.at[index, 'tag_topic_score_list'] = tagged_topic_score_list
                 df.at[index, 'tag_sentiment_score_list'] = tagged_sentiment_score_list
-
+    
 
     if tag_exist:
         '''테스트용 텍스트 문장 분리 멀티 프로세스'''
@@ -96,6 +128,7 @@ def make_df(folder_path, score_flag=True):
         '''학습용 문장 분리 멀티 프로세싱'''
         print("학습용 데이터 수:", len(df))
         # mp.freeze_support()
+        # df.to_csv("확인용.csv", encoding='utf-8-sig', index=False)
         chunk_num = mp.cpu_count()
         if len(df) > chunk_num:
             chunks = create_chunks(df, chunk_num)
@@ -122,7 +155,7 @@ def make_df(folder_path, score_flag=True):
                                             row['tag_topic_score_list'],
                                             row['tag_sentiment_list'],
                                             row['tag_sentiment_score_list']):
-                                        
+                        
                         # 태그된 문장이 속한 문장이면
                         if tag_text in origin_text:
                             tag_dict = {
@@ -188,10 +221,10 @@ def make_df(folder_path, score_flag=True):
 if __name__ == '__main__':
     '''스코어 포함 case'''
     df , not_tagged_df= make_df(folder_path="json_data", score_flag=True)
-    df.to_csv('sentenced_df_with_score.csv', index=False, encoding='utf-8-sig')
-    not_tagged_df.to_csv('test_with_score.csv', encoding='utf-8-sig', index=False)
+    df.to_csv('sentenced_df_with_score_not_split.csv', index=False, encoding='utf-8-sig')
+    not_tagged_df.to_csv('test_with_score_not_split.csv', encoding='utf-8-sig', index=False)
 
-    '''스코어 제외 case'''
-    df , not_tagged_df= make_df(folder_path="json_data", score_flag=False)
-    df.to_csv('sentenced_df_without_score.csv', index=False, encoding='utf-8-sig')
-    not_tagged_df.to_csv('test_without_score.csv', encoding='utf-8-sig', index=False)
+    # '''스코어 제외 case'''
+    # df , not_tagged_df= make_df(folder_path="json_data", score_flag=False)
+    # df.to_csv('sentenced_df_without_score.csv', index=False, encoding='utf-8-sig')
+    # not_tagged_df.to_csv('test_without_score.csv', encoding='utf-8-sig', index=False)
